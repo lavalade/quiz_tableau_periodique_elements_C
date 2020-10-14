@@ -21,7 +21,10 @@ Quiz sur le tableau périodique des éléments
 
 *Développement arrêté*.
 
-Dans un terminal à `./qtpe_bash/` : `$ ./qtpe`, pour afficher la documentation : `$ ./qtpe -h`.
+Dans un terminal à `./qtpe_bash/` : 
+
+- exécution : `$ ./qtpe`,
+- documentation : `$ ./qtpe -h`.
 
 ## C (console)
 
@@ -46,30 +49,30 @@ On peut donner sa langue au chat en frappant directement la touche *entrée*, et
 Arrêt du jeu :'(
 ```
 
-À la fin du jeu (après avoir répondu exact aux 118 élément, ou après avoir arrêté avant avec `q`), un pseudo est demandé pour enregistré le score dans le fichier d’historique `./qtpe_c/qtpe_c.scores.md` qui a la forme suivante (exemple) :
+À la fin du jeu (après avoir répondu exactement aux 118 éléments, ou après avoir arrêté avant avec `q`), un pseudo est demandé pour enregistrer le score dans le fichier d’historique `./qtpe_c/qtpe_c.scores.md`, en voici un exemple :
 
 ```
-| Pseudo           | AAAA-MM-JJ@hh:mm:ss | #el |    MS |    MN | #tt | #ko | #ok | Tps, s |
+| Pseudo           | AAAA-MM-JJ,hh:mm:ss | #el |    MS |    MN | #tt | #ko | #ok | Tps, s |
 |:-----------------|:-------------------:|----:|------:|------:|----:|----:|----:|-------:|
-|              dev | 2020-10-14t14:45:30 |   2 | 1.000 | 1.000 |   2 |   0 |   2 |      7 |
-|              dev | 2020-10-14t15:43:20 |   2 | 1.000 | 1.000 |   2 |   0 |   2 |     10 |
-|             lava | 2020-10-14t15:54:19 | 118 | 0.996 | 0.973 | 125 |   0 | 118 |    562 |
-|          essai-q | 2020-10-14t16:00:34 | 118 | 0.013 | 0.013 |   5 |   1 |   2 |     18 |
+|              dev | 2020-10-14,14:45:30 |   2 | 1.000 | 1.000 |   2 |   0 |   2 |      7 |
+|              dev | 2020-10-14,15:43:20 |   2 | 1.000 | 1.000 |   2 |   0 |   2 |     10 |
+|             lava | 2020-10-14,15:54:19 | 118 | 0.996 | 0.973 | 125 |   0 | 118 |    562 |
+|          essai-q | 2020-10-14,16:00:34 | 118 | 0.013 | 0.013 |   5 |   1 |   2 |     18 |
 ```
 
-Les colonnes sont
+Le contenu des colonnes est :
 
 - `Pseudo` : le pseudo donné par le joueur (16 caractères maximum),
 - `AAAA-MM-JJ@hh:mm:ss` : date au [format iso-8601](https://xkcd.com/1179/),
-- `#el` : nombre d’éléments chimique dans le tableau périodique,
+- `#el` : nombre d’éléments chimiques (118 au 2020-10-14),
 - `MS` : note moyenne sur les *symboles* des éléments,
 - `MN` : note moyenne sur les *noms* des éléments,
 - `#tt` : nombre de tentatives,
 - `#ko` : nombre de langue-au-chat,
 - `#ok` : nombre de réponses exactes,
-- `Tps, s` : Durée du jeu en seconde.
+- `Tps, s` : Durée du jeu en secondes.
 
 ## Python (gui)
 
-*Pas encore développé.*
+*Développement en cours, indisponible pour le moment.*
 

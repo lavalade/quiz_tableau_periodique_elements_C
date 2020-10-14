@@ -221,7 +221,7 @@ void getdate_iso8601(char *date) {
      **/
     time_t timestamp = time(NULL);
     struct tm *pTime = localtime(&timestamp);
-    strftime(date, DATE_LEN, "%Y-%m-%dt%H:%M:%S", pTime);
+    strftime(date, DATE_LEN, "%Y-%m-%d,%H:%M:%S", pTime);
 }
 
 int main(void) {
@@ -370,7 +370,7 @@ int main(void) {
     if (fscores == NULL) {
         fclose(fscores);
         fscores = fopen(FILE_SCORES, "w");
-        fprintf(fscores, "| Pseudo           | AAAA-MM-JJ@hh:mm:ss | #el |    MS |    MN | #tt | #ko | #ok | Tps, s |\n");
+        fprintf(fscores, "| Pseudo           | AAAA-MM-JJ,hh:mm:ss | #el |    MS |    MN | #tt | #ko | #ok | Tps, s |\n");
         fprintf(fscores, "|:-----------------|:-------------------:|----:|------:|------:|----:|----:|----:|-------:|\n");
     }
     fclose(fscores);
