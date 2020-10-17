@@ -9,28 +9,20 @@
 Quiz sur le tableau périodique des éléments
 </h1>
 <img src="./tpefgcolor.png" height="240"/>
+<p align="center">
+Implémentation en C d’un quiz (dans un terminal) sur le tableau périodique des éléments.
+<br />
+*Développement en cours...*
+</p>
 </p>
 
 ## Table des matières
 
-* [Bash (console)](#bash-console)
-* [C (console)](#c-console)
-* [Python (gui)](#python-gui)
+* [Mode d’emploi](#mode-d-emloi)
 
-## Bash (console)
+## Mode d’emploi
 
-*Développement arrêté*.
-
-Dans un terminal à `./qtpe_bash/` : 
-
-- exécution : `$ ./qtpe`,
-- documentation : `$ ./qtpe -h`.
-
-## C (console)
-
-*Développement en cours*.
-
-Dans un terminal à `./qtpe_c/` : 
+Dans un terminal : 
 
 - compilation : `$ make`,
 - exécution : `$ ./qtpe_c`.
@@ -63,7 +55,7 @@ Arrêt du jeu :'(
 Le contenu des colonnes est :
 
 - `Pseudo` : le pseudo donné par le joueur (16 caractères maximum),
-- `AAAA-MM-JJ@hh:mm:ss` : date au [format iso-8601](https://xkcd.com/1179/),
+- `AAAA-MM-JJ,hh:mm:ss` : date au [format iso-8601](https://xkcd.com/1179/),
 - `#el` : nombre d’éléments chimiques (118 au 2020-10-14),
 - `MS` : note moyenne sur les *symboles* des éléments,
 - `MN` : note moyenne sur les *noms* des éléments,
@@ -71,8 +63,4 @@ Le contenu des colonnes est :
 - `#ko` : nombre de langue-au-chat,
 - `#ok` : nombre de réponses exactes,
 - `Tps, s` : Durée du jeu en secondes.
-
-## Python (gui)
-
-*Développement en cours, indisponible pour le moment.*
 
