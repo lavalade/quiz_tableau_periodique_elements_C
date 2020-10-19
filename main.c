@@ -3,8 +3,12 @@
  * portage en C du script bash ~/cmd/qtpe
  *
  * TODO:
- * - Modes approximatif en option
- * - Modes léger en option
+ * - Compatibilité avec les caractères non-ascii
+ * - Options :
+ *   - mode approximatif
+ *   - mode léger
+ *   - documentation
+ *   - ...
  * - Distance de Levenshein
  * - Affichage du tableau périodique des éléments mis à jour à chaque question
  * - Autres modes de jeu :
@@ -20,30 +24,21 @@
  **/
 
 #include <assert.h>
-#include <time.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 
-#define TPE_LEN 118
-//#define TPE_LEN 2
-#define TPE_COLUMNS 32
-#define MAX_LEN_SYMBOL 3
-#define MAX_LEN_NAME 14
-#define LANGUAGES 4
-#define MAX_LEN_LINE 128
-#define TABLE_LEN 4269
-#define TABLE_COLUMNS 194
-#define TABLE_LINES 22
-#define CELL_WIDTH 6
-#define CELL_HEIGHT 3
-#define FILE_TABLE "table.txt"
-#define FILE_DATA "tpe.txt"
-#define FILE_SCORES "qtpe_c.scores.md"
+#include "manual.h"
+#include "table_empty.h"
+#include "tpe.h"
+#include "utils.h"
+
+#define FILE_SCORES "scores.md"
 #define MAX_LEN_ANSWER 17
 #define MAX_LEN_PSEUDO 17
-#define DATE_LEN 20
 /**
  * Longueur du nom le plus long dans chaque langue :
  * Fr : len(Rutherfordium) = 13
@@ -52,188 +47,12 @@
  * It : len(Rutherfordio) = 12
  *
  * Longueur de la date au format iso-8601 : 19
- * aaaa:mm:jjthh:mm:ss
+ * aaaa-mm-jj,hh:mm:ss
  **/
 
-typedef struct Element Element;
-struct Element {
-    unsigned char Z;
-    char symbol[MAX_LEN_SYMBOL];
-    char names[LANGUAGES][MAX_LEN_NAME];
-};
-
-Element *tpe[TPE_LEN];
-
-char table[TABLE_LEN];
-
-void load_table(void) {
-    /**
-     * Longueur d’une ligne : 32 * 6 + 1 + 1 = 194
-     * Nombre de lignes : 7 * 3 + 1 = 22
-     * Taille totale : 194 * 22 = 4268
-     * Taille avec octet nul terminal : 4269
-     **/
-    FILE *file_table = fopen(FILE_TABLE, "r");
-    int c;
-    unsigned short i;
-    for (i = 0, c = fgetc(file_table);
-            c != EOF;
-            ++i, c = fgetc(file_table)) {
-        table[i] = c;
-    }
-    table[i] = '\0';
-    fclose(file_table);
-    //printf("%s", table);
-}
-
-void load_data(void) {
-    unsigned char i;
-    for (i = 0; i < TPE_LEN; ++i)
-        tpe[i] = malloc(sizeof(Element));
-    FILE *fr = fopen(FILE_DATA, "r");
-    assert(fr != NULL);
-    for (i = 0; i < TPE_LEN; ++i) {
-        fscanf(fr, "%hhu %s %s %s %s %s\n",
-                &tpe[i]->Z,
-                tpe[i]->symbol,
-                tpe[i]->names[0],
-                tpe[i]->names[1],
-                tpe[i]->names[2],
-                tpe[i]->names[3]);
-    }
-    fclose(fr);
-    fr = NULL;
-}
-
-void display_data(void) {
-    unsigned char i;
-    for (i = 0; i < TPE_LEN; ++i) {
-        printf("%hhu, %s, %s, %s, %s, %s\n",
-                tpe[i]->Z,
-                tpe[i]->symbol,
-                tpe[i]->names[0],
-                tpe[i]->names[1],
-                tpe[i]->names[2],
-                tpe[i]->names[3]);
-    }
-}
-
-bool all(unsigned char *array) {
-    for (unsigned char i = 0; i < TPE_LEN; i++)
-        if (!array[i])
-            return false;
-    return true;
-}
-
-void inputstr(char *str, unsigned char maxlen) {
-    /**
-     * Acquisition d’une chaine de taille inconnue, cf
-     * https://stackoverflow.com/a/16871702/9249152
-     * Acquisition d’une chaine avec une taille maximale, cf
-     * https://stackoverflow.com/a/7898516/9249152
-     **/
-    int c;
-    unsigned char i, j;
-    for (i = 0; (c = getchar()) != '\n' && c != EOF; i++) {
-        if (i < maxlen - 1) {
-            str[i] = c;
-            j = i;
-        }
-    }
-    str[++j] = '\0';
-}
-
-void clear_input(char *answer,
-                 char *answer_symbol,
-                 char *answer_name,
-                 char *toomuchspaces) {
-    strcpy(answer, "");
-    answer_symbol = NULL;
-    answer_name   = NULL;
-    toomuchspaces = NULL;
-    if (false) {
-        printf("%14p  -->  \"%s\"\n", answer       , answer       );
-        printf("%14p  -->  \"%s\"\n", answer_symbol, answer_symbol);
-        printf("%14p  -->  \"%s\"\n", answer_name  , answer_name  );
-        printf("%14p  -->  \"%s\"\n", toomuchspaces, toomuchspaces);
-    }
-}
-
-unsigned char minhhu(unsigned char x, unsigned char y) {
-    return x < y ? x : y;
-}
-
-unsigned char levenshein(char *solution, char *answer) {
-    /**
-     * TODO
-     * Distance de Levenshein entre deux chaines
-     * Algorithme de Wagner et Fisher, cf
-     * https://fr.wikipedia.org/wiki/Distance_de_Levenshtein
-     **/
-    //return 0;
-    return (unsigned char)strlen(solution);  // PROVISOIRE
-}
-
-float mark(char *solution, char *answer) {
-    /**
-     * Calcul de la note à partir de la distance de Levenshein,
-     * avec la fonction affine suivante :
-     * note = 1 - min(distance, len) / len
-     * avec `len` la longueur de la solution.
-     **/
-    unsigned char distance = levenshein(solution, answer);
-    unsigned char len = (unsigned char)strlen(solution);
-    return 1. - minhhu(distance, len) / len;
-}
-
-float update_mean(float old_mean, unsigned char n, float new) {
-    /**
-     * Mise à jour d’une moyenne de `n - 1` éléments avec un nouvel élément
-     **/
-    return ((n - 1) * old_mean + new) / n;
-}
-
-unsigned short sumhhu(unsigned char *array) {
-    /**
-     * Somme de TPE_LEN valeurs
-     **/
-    unsigned short out = 0;
-    for (unsigned char i = 0; i < TPE_LEN; i++)
-        out += array[i];
-    return out;
-}
-
-float meanf(float *marks) {
-    /**
-     * Moyenne de TPE_LEN valeurs
-     **/
-    float out = 0.;
-    for (unsigned char i = 0; i < TPE_LEN; i++)
-        out += marks[i];
-    return out / TPE_LEN;
-}
-
-void getdate_iso8601(char *date) {
-    /**
-     * Renvoie la date au format iso-8601 (càd : aaaa-mm-jjthh:mm:ss), cf
-     * https://xkcd.com/1179/
-     * https://koor.fr/C/ctime/strftime.wp
-     **/
-    time_t timestamp = time(NULL);
-    struct tm *pTime = localtime(&timestamp);
-    strftime(date, DATE_LEN, "%Y-%m-%d,%H:%M:%S", pTime);
-}
-
-int main(void) {
+int main(int argc, char *argv[]) {
     //printf("sizeof(bool) = %zu\n", sizeof(bool));
     unsigned char i = 0;
-    // Acquisition des données sur les éléments
-    load_data();
-    //display_data();
-    // Acquisition de la table (affichage joli)
-    load_table();
-    //printf("%s", table);
-    // Variables de jeu
     unsigned char answered[TPE_LEN] = {0};
     unsigned char try_counter[TPE_LEN] = {0};
     unsigned char giveup_counter[TPE_LEN] = {0};
@@ -246,6 +65,45 @@ int main(void) {
     char answer[MAX_LEN_ANSWER];
     char *answer_symbol, *answer_name, *toomuchspaces;
     srand(time(NULL));
+    /*
+    // Traitement des options, cf
+    // https://www.geeksforgeeks.org/getopt-function-in-c-to-parse-command-line-arguments/
+    bool mode_apprx = false;
+    bool mode_light = false;
+    char opt;
+    while ((opt = getopt(argc, argv, ":alho:")) != -1) {
+        switch (opt) {
+            case 'a':
+                printf("Mode approximatif\n");
+                mode_apprx = true;
+                break;
+            case 'l':
+                printf("Mode léger\n");
+                mode_light = true;
+                break;
+            case 'h':
+                printf("%s\n", manual);
+                return EXIT_SUCCESS;
+            case 'o':
+                printf("Sauvegarde du tableau dans : %s\n", optarg);
+                break;
+            case ':':
+                printf("L’option '-%c' a besoin d’une valeur (argument)\n", opt);
+                break;
+            case '?':
+                printf("Option inconnue : '-%c'\n", opt);
+                break;
+        }
+    }
+    for (; optind < argc; ++optind)
+        printf("Arg. sup.: %s\n", argv[optind]);
+    */
+    // Acquisition des données sur les éléments
+    load_data();
+    //display_data();
+    // Tentative de remplacement dans  table
+    table[198] = 'H';
+    printf("%s", table);
     // Chronométrage, cf
     // https://koor.fr/C/ctime/time.wp
     time_t tic = time(NULL);
@@ -281,6 +139,9 @@ int main(void) {
                 ++giveup_counter[x];
                 printf("La réponse était : \"%s %s\"\n",
                         tpe[x]->symbol, tpe[x]->names[0]);
+                // Pour la pédagogie, on doit rentrer le <symbole> <nom>
+                // de l’élément (jusqu’à ce que ce soit exact)
+                // TODO
                 break;
             }
             // Réponse de la forme <symbole> <nom> ?
@@ -345,10 +206,11 @@ int main(void) {
             name_marks[i] = 0.;
         }
     // Affichage détaillé
-    for (i = 0; i < TPE_LEN; i++) {
-        printf("%2s : %.3f %.3f\n",
-                tpe[i]->symbol, symbol_marks[i], name_marks[i]);
-    }
+    if (0)
+        for (i = 0; i < TPE_LEN; i++) {
+            printf("%2s : %.3f %.3f\n",
+                    tpe[i]->symbol, symbol_marks[i], name_marks[i]);
+        }
     // Moyennes sur tous les éléments
     float symbol_mark_mean = meanf(symbol_marks);
     float name_mark_mean = meanf(name_marks);
