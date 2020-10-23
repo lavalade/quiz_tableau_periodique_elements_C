@@ -24,21 +24,21 @@
  **/
 
 #include <assert.h>
+#include <locale.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <wchar.h>
 
 #include "manual.h"
 #include "table_empty.h"
 #include "tpe.h"
 #include "utils.h"
 
-#define FILE_SCORES "scores.md"
-#define MAX_LEN_ANSWER 17
-#define MAX_LEN_PSEUDO 17
+#define MAX_ANSWER_LEN 17
 /**
  * Longueur du nom le plus long dans chaque langue :
  * Fr : len(Rutherfordium) = 13
@@ -50,20 +50,22 @@
  * aaaa-mm-jj,hh:mm:ss
  **/
 
+unsigned char answered[TPE_LEN] = {0};
+unsigned char try_counter[TPE_LEN] = {0};
+unsigned char giveup_counter[TPE_LEN] = {0};
+float symbol_marks[TPE_LEN] = {0.};
+float name_marks[TPE_LEN] = {0.};
+
+bool symbol_name_from_Z(unsigned char x);
+
+
+// ============================================================================
+
+
 int main(int argc, char *argv[]) {
-    //printf("sizeof(bool) = %zu\n", sizeof(bool));
-    unsigned char i = 0;
-    unsigned char answered[TPE_LEN] = {0};
-    unsigned char try_counter[TPE_LEN] = {0};
-    unsigned char giveup_counter[TPE_LEN] = {0};
-    float symbol_marks[TPE_LEN] = {0.};
-    float name_marks[TPE_LEN] = {0.};
-    float symbol_mark, name_mark;
-    unsigned char x, Z;
-    bool symbol_ok, name_ok;
-    bool stop = false;
-    char answer[MAX_LEN_ANSWER];
-    char *answer_symbol, *answer_name, *toomuchspaces;
+    unsigned char i;
+    unsigned char x;
+    bool pursue;
     srand(time(NULL));
     /*
     // Traitement des options, cf
@@ -102,8 +104,10 @@ int main(int argc, char *argv[]) {
     load_data();
     //display_data();
     // Tentative de remplacement dans  table
+    /*
     table[198] = 'H';
     printf("%s", table);
+    */
     // Chronométrage, cf
     // https://koor.fr/C/ctime/time.wp
     time_t tic = time(NULL);
@@ -118,87 +122,10 @@ int main(int argc, char *argv[]) {
             printf("%hhu", answered[i]);
         printf("\n");
         */
-        // Boucle de répétition de la question
-        symbol_ok = false;
-        name_ok = false;
-        Z = x + 1;
-        while (true) {
-            printf("%hhu ? : ", Z);
-            inputstr(answer, MAX_LEN_ANSWER);
-            // Quitter
-            if (strcmp(answer, "q") == 0) {
-                printf("Arrêt du jeu :'(\n");
-                //return EXIT_SUCCESS;
-                stop = true;  // stoppe la boucle do-while parente
-                break;  // stoppe cette boucle while
-            }
-            // Tentatives
-            ++try_counter[x];
-            // Langue au chat
-            if (strlen(answer) == 0) {
-                ++giveup_counter[x];
-                printf("La réponse était : \"%s %s\"\n",
-                        tpe[x]->symbol, tpe[x]->names[0]);
-                // Pour la pédagogie, on doit rentrer le <symbole> <nom>
-                // de l’élément (jusqu’à ce que ce soit exact)
-                // TODO
-                break;
-            }
-            // Réponse de la forme <symbole> <nom> ?
-            answer_symbol = strtok(answer, " ");
-            answer_name = strtok(NULL, " ");
-            toomuchspaces = strtok(NULL, " ");
-            if (answer_name == NULL || toomuchspaces != NULL) {
-                printf("La réponse doit être de la forme \"Un Unobtainium\"\n");
-                clear_input(answer, answer_symbol, answer_name, toomuchspaces);
-                continue;
-            }
-            // Symbole OK ?
-            if (strcmp(answer_symbol, tpe[x]->symbol) == 0) {
-                symbol_ok = true;
-                symbol_mark = 1.;
-            } else {
-                symbol_mark = mark(tpe[x]->symbol, answer_symbol);
-                printf("Non, le symbole de l'élément Z = %hhu n'est pas \"%s\" !\n",
-                        Z, answer_symbol);
-            }
-            // Nom OK ?
-            if (strcmp(answer_name, tpe[x]->names[0]) == 0) {
-                name_ok = true;
-                name_mark = 1.;
-            } else {
-                name_mark = mark(tpe[x]->names[0], answer_name);
-                printf("Non, le nom de l'élément Z = %hhu n'est pas \"%s\" !\n",
-                        Z, answer_name);
-            }
-            // MàJ des moyennes
-            if (try_counter[x] == 0) {
-                symbol_marks[x] = symbol_mark;
-                name_marks[x] = name_mark;
-            } else {
-                symbol_marks[x] = update_mean(symbol_marks[x], try_counter[x],
-                                              symbol_mark);
-                name_marks[x] = update_mean(name_marks[x], try_counter[x],
-                                            name_mark);
-            }
-            // Symbole | nom KO ?
-            if (!symbol_ok || !name_ok) {
-                clear_input(answer, answer_symbol, answer_name, toomuchspaces);
-                continue;
-            }
-            // Symbole & nom OK ?
-            if (symbol_ok && name_ok) {
-                printf("Oui !\n");
-                answered[x] = 1;
-                clear_input(answer, answer_symbol, answer_name, toomuchspaces);
-                break;
-            } 
-        }
-    } while (!all(answered) && !stop);
+        pursue = symbol_name_from_Z(x);
+    } while (!all(answered) && pursue);
     // Chronométrage
     time_t toc = time(NULL);
-    unsigned short duration = (unsigned short)difftime(toc, tic);
-    printf("duration = %hu\n", duration);
     // Langue au chat  ==>  note 0/1
     for (i = 0; i < TPE_LEN; i++)
         if (giveup_counter[i] > 0) {
@@ -208,44 +135,16 @@ int main(int argc, char *argv[]) {
     // Affichage détaillé
     if (0)
         for (i = 0; i < TPE_LEN; i++) {
-            printf("%2s : %.3f %.3f\n",
+            wprintf(L"%2ls : %.3f %.3f\n",
                     tpe[i]->symbol, symbol_marks[i], name_marks[i]);
         }
-    // Moyennes sur tous les éléments
-    float symbol_mark_mean = meanf(symbol_marks);
-    float name_mark_mean = meanf(name_marks);
-    printf("Moyenne symboles : %.3f\n", symbol_mark_mean);
-    printf("Moyenne noms     : %.3f\n", name_mark_mean);
-    // Compteurs globaux
-    unsigned short try_count_global = sumhhu(try_counter);
-    unsigned short giveup_count_global = sumhhu(giveup_counter);
-    unsigned short answered_count_global = sumhhu(answered);
-    // Pseudo ?
-    char pseudo[MAX_LEN_PSEUDO] = "";
-    do {
-        printf("Pseudo [16 caractères maximum] ? : ");
-        inputstr(pseudo, MAX_LEN_PSEUDO);
-    } while (strcmp(pseudo, "") == 0);
-    // Fichiers des scores existant ?
-    FILE *fscores;
-    fscores = fopen(FILE_SCORES, "r");
-    if (fscores == NULL) {
-        fclose(fscores);
-        fscores = fopen(FILE_SCORES, "w");
-        fprintf(fscores, "| Pseudo           | AAAA-MM-JJ,hh:mm:ss | #el |    MS |    MN | #tt | #ko | #ok | Tps, s |\n");
-        fprintf(fscores, "|:-----------------|:-------------------:|----:|------:|------:|----:|----:|----:|-------:|\n");
-    }
-    fclose(fscores);
-    // Sauvegarde du score
-    char date[DATE_LEN];
-    getdate_iso8601(date);
-    fscores = fopen(FILE_SCORES, "a");
-    fprintf(fscores,
-            "| %16s | %19s | %3d | %5.3f | %5.3f | %3hu | %3hu | %3hu | %6hu |\n",
-            pseudo, date, TPE_LEN, symbol_mark_mean, name_mark_mean, 
-            try_count_global, giveup_count_global, answered_count_global,
-            duration);
-    fclose(fscores);
+    // Sauvegarde du score dans le fichier d’historique
+    archive_score(meanf(symbol_marks),
+                  meanf(name_marks), 
+                  sumhhu(try_counter),
+                  sumhhu(giveup_counter),
+                  sumhhu(answered),
+                  (unsigned short)difftime(toc, tic));
     // Libération
     for (i = 0; i < TPE_LEN; ++i) {
         free(tpe[i]);
@@ -254,3 +153,123 @@ int main(int argc, char *argv[]) {
     //
     return EXIT_SUCCESS;
 }
+
+
+// ============================================================================
+
+
+bool symbol_name_from_Z(unsigned char x) {
+    /**
+     * Arguments :
+     * unsigned char x : index de l’élément, dans [0, 117]
+     * bool givedup ::
+     *     - faux : question normale
+     *     - vrai : quand on a donné sa langue au chat
+     *
+     * Tant qu’on n’a pas donné la bonne réponse :
+     * - Acquisition de <symbole> <nom> :
+     *   - si "q" : quitter
+     *   - si "" : langue-au-chat, il faut retaper <symbole> <nom>
+     *   - sinon :
+     *      - si forme OK :
+     *          - symbole OK ? sinon : recommencer
+     *          - nom OK ? sinon : recommencer
+     *      - sinon : recommencer
+     **/
+    setlocale(LC_ALL, "");
+    unsigned char Z = x + 1;
+    wchar_t answer[MAX_ANSWER_LEN];
+    wchar_t answer_symbol[MAX_SYMBOL_LEN];
+    wchar_t answer_name[MAX_NAME_LEN];
+    bool symbol_ok = false;
+    bool name_ok = false;
+    float symbol_mark, name_mark;
+    bool givedup = false;
+    bool ok;
+    // Boucle de répétition de la question
+    while (true) {
+        printf("%hhu ? : ", Z);
+        input_wchars(answer, MAX_ANSWER_LEN);
+        // Quitter
+        if (wcscmp(answer, L"q") == 0) {
+            printf("Arrêt du jeu :'(\n");
+            return false;
+        }
+        // Tentatives
+        if (!givedup)
+            ++try_counter[x];
+        // Langue au chat
+        if (wcslen(answer) == 0) {
+            givedup = true;
+            ++giveup_counter[x];
+            wprintf(L"La réponse était : \"%ls %ls\"\n",
+                    tpe[x]->symbol, tpe[x]->names[0]);
+            // Pour la pédagogie, on doit rentrer le <symbole> <nom>
+            // de l’élément (jusqu’à ce que ce soit exact)
+            continue;
+        }
+        // Réponse de la forme "<symbole> <nom>" ?
+        ok = split(answer, answer_symbol, answer_name);
+        /*
+        wprintf(L"answer        = \"%ls\"\n", answer);
+        wprintf(L"answer_symbol = \"%ls\"\n", answer_symbol);
+        wprintf(L"answer_name   = \"%ls\"\n", answer_name);
+        printf("%s\n", ok ? "ok" : "ko");
+        */
+        if (!ok) {
+            printf("La réponse doit être de la forme \"Un Unobtainium\"\n");
+            clear_input(answer, answer_symbol, answer_name);
+            continue;
+        }
+        // Symbole OK ?
+        //wprintf(L"tpe[%hhu]->symbol = \"%ls\"\n", x, tpe[x]->symbol);
+        if (wcscmp(answer_symbol, tpe[x]->symbol) == 0) {
+            symbol_ok = true;
+            symbol_mark = 1.;
+        } else {
+            symbol_mark = mark(tpe[x]->symbol, answer_symbol);
+            wprintf(L"Non, le symbole de l'élément Z = %hhu n'est pas \"%ls\" !\n",
+                    Z, answer_symbol);
+        }
+        // Nom OK ?
+        //wprintf(L"tpe[%hhu]->names[0] = \"%ls\"\n", x, tpe[x]->names[0]);
+        if (wcscmp(answer_name, tpe[x]->names[0]) == 0) {
+            name_ok = true;
+            name_mark = 1.;
+        } else {
+            name_mark = mark(tpe[x]->names[0], answer_name);
+            wprintf(L"Non, le nom de l'élément Z = %hhu n'est pas \"%ls\" !\n",
+                    Z, answer_name);
+        }
+        // MàJ des moyennes
+        if (!givedup) {
+            if (try_counter[x] == 0) {
+                symbol_marks[x] = symbol_mark;
+                name_marks[x] = name_mark;
+            } else {
+                symbol_marks[x] = update_mean(symbol_marks[x], try_counter[x],
+                                              symbol_mark);
+                name_marks[x] = update_mean(name_marks[x], try_counter[x],
+                                            name_mark);
+            }
+        }
+        // Symbole | nom KO ?
+        if (!symbol_ok || !name_ok) {
+            clear_input(answer, answer_symbol, answer_name);
+            continue;
+        }
+        // Symbole & nom OK ?
+        if (symbol_ok && name_ok) {
+            if (!givedup) {
+                printf("Oui !\n");
+                answered[x] = 1;
+            } else {
+                printf("Voilà !\n");
+            }
+            clear_input(answer, answer_symbol, answer_name);
+            break;
+        } 
+    }
+    return true;
+}
+

@@ -16,8 +16,8 @@
 typedef struct Element Element;
 struct Element {
     unsigned char Z;
-    char symbol[MAX_LEN_SYMBOL];
-    char names[LANGUAGES][MAX_LEN_NAME];
+    wchar_t symbol[MAX_LEN_SYMBOL];
+    wchar_t names[LANGUAGES][MAX_LEN_NAME];
 };
 
 Element *tpe[TPE_LEN];
