@@ -5,7 +5,8 @@
  **/
 
 bool all(unsigned char *array);
-void clear_input(wchar_t *answer,
+void clear_input(wchar_t *raw_answer,
+                 wchar_t *answer,
                  wchar_t *answer_symbol,
                  wchar_t *answer_name);
 unsigned char minhhu(unsigned char x, unsigned char y);
@@ -23,4 +24,6 @@ void archive_score(float symbol_mark_mean,
                    unsigned short try_count_global,
                    unsigned short giveup_count_global,
                    unsigned short answered_count_global,
+                   bool mode_apprx,
+                   bool mode_light,
                    unsigned short duration);

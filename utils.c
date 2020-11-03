@@ -23,12 +23,18 @@ bool all(unsigned char *array) {
 }
 
 
-void clear_input(wchar_t *answer,
+void clear_input(wchar_t *raw_answer,
+                 wchar_t *answer,
                  wchar_t *answer_symbol,
                  wchar_t *answer_name) {
+    wcscpy(raw_answer, L"");
     wcscpy(answer, L"");
+    wcscpy(answer_symbol, L"");
+    wcscpy(answer_name, L"");
+    /*
     answer_symbol = NULL;
     answer_name   = NULL;
+    */
     if (false) {
         wprintf(L"%14p  -->  \"%ls\"\n", answer       , answer       );
         wprintf(L"%14p  -->  \"%ls\"\n", answer_symbol, answer_symbol);
@@ -164,7 +170,7 @@ bool split(wchar_t *answer, wchar_t *answer_symbol, wchar_t *answer_name) {
     unsigned char nos = 0;  // number of spaces
     //printf("split:\n");
     for (i = 0; i < len; ++i) {
-        if (answer[i] == (wchar_t)' ') {
+        if (answer[i] == L' ') {
             ++nos;
         } else {
             if (nos == 0) {
@@ -187,13 +193,16 @@ bool split(wchar_t *answer, wchar_t *answer_symbol, wchar_t *answer_name) {
         }
     }
     //wprintf(L"\tsymbol[%hhu] = '\\0'\n", j);
-    answer_symbol[j] = (wchar_t)'\0';
+    answer_symbol[j] = L'\0';
     //wprintf(L"\tname[%hhu] = '\\0'\n", k);
-    answer_name[k] = (wchar_t)'\0';
-    if (nos == 1 && jj < MAX_SYMBOL_LEN && kk < MAX_NAME_LEN)
+    answer_name[k] = L'\0';
+    if (nos == 1 && jj < MAX_SYMBOL_LEN && kk < MAX_NAME_LEN) {
         return true;
-    else
+    } else {
+        answer_symbol[0] = L'\0';
+        answer_name[0] = L'\0';
         return false;
+    }
 }
 
 
@@ -202,6 +211,8 @@ void archive_score(float symbol_mark_mean,
                    unsigned short try_count_global,
                    unsigned short giveup_count_global,
                    unsigned short answered_count_global,
+                   bool mode_apprx,
+                   bool mode_light,
                    unsigned short duration) {
     setlocale(LC_ALL, "");
     printf("Moyenne symboles : %.3f\n", symbol_mark_mean);
@@ -219,8 +230,8 @@ void archive_score(float symbol_mark_mean,
     if (fscores == NULL) {
         fclose(fscores);
         fscores = fopen(FILE_SCORES, "w");
-        fprintf(fscores, "| Pseudo           | AAAA-MM-JJ,hh:mm:ss | #el |    MS |    MN | #tt | #ko | #ok | Tps, s |\n");
-        fprintf(fscores, "|:-----------------|:-------------------:|----:|------:|------:|----:|----:|----:|-------:|\n");
+        fprintf(fscores, "| Pseudo           | AAAA-MM-JJ,hh:mm:ss | #el |    MS |    MN | #tt | #ko | #ok | A | L | Tps, s |\n");
+        fprintf(fscores, "|:-----------------|:-------------------:|----:|------:|------:|----:|----:|----:|:-:|:-:|-------:|\n");
     }
     fclose(fscores);
     // Sauvegarde du score
@@ -228,9 +239,10 @@ void archive_score(float symbol_mark_mean,
     getdate_iso8601(date);
     fscores = fopen(FILE_SCORES, "a");
     fprintf(fscores,
-            "| %-16ls | %19s | %3d | %5.3f | %5.3f | %3hu | %3hu | %3hu | %6hu |\n",
+            "| %-16ls | %19s | %3d | %5.3f | %5.3f | %3hu | %3hu | %3hu | %1hhu | %1hhu | %6hu |\n",
             pseudo, date, TPE_LEN, symbol_mark_mean, name_mark_mean, 
             try_count_global, giveup_count_global, answered_count_global,
+            mode_apprx, mode_light,
             duration);
     fclose(fscores);
 }

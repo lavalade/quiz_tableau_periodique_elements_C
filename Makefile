@@ -11,17 +11,20 @@ TARGET = quiz
 
 all: $(TARGET)
 
-$(TARGET): main.o tpe.o utils.o
-	$(CC) $(CFLAGS) -o $(TARGET) main.o tpe.o utils.o
+$(TARGET): main.o tpe.o utils.o wchar_to_ascii.o
+	$(CC) $(CFLAGS) -o $(TARGET) $^
 
 main.o: main.c
-	$(CC) $(CFLAGS) -c main.c
+	$(CC) $(CFLAGS) -c $^
 
 tpe.o: tpe.c
-	$(CC) $(CFLAGS) -c tpe.c
+	$(CC) $(CFLAGS) -c $^
 
 utils.o: utils.c
-	$(CC) $(CFLAGS) -c utils.c
+	$(CC) $(CFLAGS) -c $^
+
+wchar_to_ascii.o: wchar_to_ascii.c
+	$(CC) $(CFLAGS) -c $^
 
 clean:
-	rm -v $(TARGET) *.o
+	rm -v $(TARGET) *.o 2> /dev/null

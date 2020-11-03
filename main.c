@@ -2,6 +2,14 @@
  * Quiz sur les éléments chimiques du tableau périodique,
  * portage en C du script bash ~/cmd/qtpe
  *
+ * BUGS:
+ * - Quand on donne sa langue au chat dès la première question :
+$ ./quiz
+109 ? :
+La réponse doit être de la forme "Un Unobtainium"
+109 ? :
+La réponse était : "Mt Meitnerium"
+ *
  * TODO:
  * - Compatibilité avec les caractères non-ascii
  * - Options :
@@ -33,10 +41,12 @@
 #include <unistd.h>
 #include <wchar.h>
 
-#include "manual.h"
+#include "main.h"
+//#include "manual.h"
 #include "table_empty.h"
 #include "tpe.h"
 #include "utils.h"
+#include "wchar_to_ascii.h"
 
 #define MAX_ANSWER_LEN 17
 /**
@@ -50,28 +60,15 @@
  * aaaa-mm-jj,hh:mm:ss
  **/
 
-unsigned char answered[TPE_LEN] = {0};
-unsigned char try_counter[TPE_LEN] = {0};
-unsigned char giveup_counter[TPE_LEN] = {0};
-float symbol_marks[TPE_LEN] = {0.};
-float name_marks[TPE_LEN] = {0.};
-
-bool symbol_name_from_Z(unsigned char x);
-
 
 // ============================================================================
 
 
 int main(int argc, char *argv[]) {
-    unsigned char i;
-    unsigned char x;
-    bool pursue;
-    srand(time(NULL));
-    /*
-    // Traitement des options, cf
-    // https://www.geeksforgeeks.org/getopt-function-in-c-to-parse-command-line-arguments/
-    bool mode_apprx = false;
-    bool mode_light = false;
+    /** 
+     * Traitement des options
+     **/
+    setlocale(LC_ALL, "");
     char opt;
     while ((opt = getopt(argc, argv, ":alho:")) != -1) {
         switch (opt) {
@@ -87,18 +84,43 @@ int main(int argc, char *argv[]) {
                 printf("%s\n", manual);
                 return EXIT_SUCCESS;
             case 'o':
-                printf("Sauvegarde du tableau dans : %s\n", optarg);
+                printf("Sauvegarde du tableau dans : '%s'\n", optarg);
                 break;
             case ':':
-                printf("L’option '-%c' a besoin d’une valeur (argument)\n", opt);
-                break;
+                if (optopt == 'o')
+                    fprintf(stderr, "/!\\ L'option '-o' a besoin d'un argument.\n");
+                else if (isprint(optopt))
+                    fprintf(stderr, "/!\\ Option '-%c' inconnue.\n", optopt);
+                else
+                    fprintf(stderr, "/!\\ Caractere d'option inconnu: '\\x%x'.\n",
+                            optopt);
+                return EXIT_FAILURE;
             case '?':
-                printf("Option inconnue : '-%c'\n", opt);
-                break;
+                fprintf(stderr, "/!\\ Option inconnue : '-%c'\n", optopt);
+                return EXIT_FAILURE;
+            default:
+                fprintf(stderr, "/!\\\n");
+                fprintf(stderr, "%s", manual);
+                return EXIT_FAILURE;
         }
     }
-    for (; optind < argc; ++optind)
-        printf("Arg. sup.: %s\n", argv[optind]);
+    if (optind < argc) {
+        fprintf(stderr, "/!\\ Arguments exedentaites :");
+        for (unsigned char index = optind; index < argc; ++index)
+            fprintf(stderr, " '%s'", argv[index]);
+        fprintf(stderr, "\n");
+        return EXIT_FAILURE;
+    }
+    unsigned char i;
+    unsigned char x;
+    bool pursue;
+    /*
+    // Test tolower
+    wchar_t test[] = L"CoNnArD ÉcariSSeur";
+    wprintf(L"%ls\n", test);
+    AZ_to_az(test);
+    wprintf(L"%ls\n", test);
+    return 0;
     */
     // Acquisition des données sur les éléments
     load_data();
@@ -112,6 +134,7 @@ int main(int argc, char *argv[]) {
     // https://koor.fr/C/ctime/time.wp
     time_t tic = time(NULL);
     // Boucle du jeu
+    srand(time(NULL));
     do {
         // Tirage au sort d’un élément
         do {
@@ -144,6 +167,8 @@ int main(int argc, char *argv[]) {
                   sumhhu(try_counter),
                   sumhhu(giveup_counter),
                   sumhhu(answered),
+                  mode_apprx,
+                  mode_light,
                   (unsigned short)difftime(toc, tic));
     // Libération
     for (i = 0; i < TPE_LEN; ++i) {
@@ -178,9 +203,12 @@ bool symbol_name_from_Z(unsigned char x) {
      **/
     setlocale(LC_ALL, "");
     unsigned char Z = x + 1;
+    wchar_t raw_answer[MAX_ANSWER_LEN];
     wchar_t answer[MAX_ANSWER_LEN];
     wchar_t answer_symbol[MAX_SYMBOL_LEN];
     wchar_t answer_name[MAX_NAME_LEN];
+    wchar_t solution_symbol[MAX_SYMBOL_LEN];
+    wchar_t solution_name[MAX_NAME_LEN];
     bool symbol_ok = false;
     bool name_ok = false;
     float symbol_mark, name_mark;
@@ -189,7 +217,24 @@ bool symbol_name_from_Z(unsigned char x) {
     // Boucle de répétition de la question
     while (true) {
         printf("%hhu ? : ", Z);
-        input_wchars(answer, MAX_ANSWER_LEN);
+        input_wchars(raw_answer, MAX_ANSWER_LEN);
+//fwprintf(stderr, L"raw_answer      = \"%ls\"\n", raw_answer);
+        // Mode approximatif ?
+        if (mode_apprx) {
+            wcstr_to_ascii(raw_answer, answer);
+            AZ_to_az(answer);
+            wcstr_to_ascii(tpe[x]->symbol, solution_symbol);
+            AZ_to_az(solution_symbol);
+            wcstr_to_ascii(tpe[x]->names[0], solution_name);
+            AZ_to_az(solution_name);
+        } else {
+            wcscpy(answer, raw_answer);
+            wcscpy(solution_symbol, tpe[x]->symbol);
+            wcscpy(solution_name, tpe[x]->names[0]);
+        }
+//fwprintf(stderr, L"answer          = \"%ls\"\n", answer);
+//fwprintf(stderr, L"solution_symbol = \"%ls\"\n", solution_symbol);
+//fwprintf(stderr, L"solution_name   = \"%ls\"\n", solution_name);
         // Quitter
         if (wcscmp(answer, L"q") == 0) {
             printf("Arrêt du jeu :'(\n");
@@ -210,34 +255,32 @@ bool symbol_name_from_Z(unsigned char x) {
         }
         // Réponse de la forme "<symbole> <nom>" ?
         ok = split(answer, answer_symbol, answer_name);
-        /*
-        wprintf(L"answer        = \"%ls\"\n", answer);
-        wprintf(L"answer_symbol = \"%ls\"\n", answer_symbol);
-        wprintf(L"answer_name   = \"%ls\"\n", answer_name);
-        printf("%s\n", ok ? "ok" : "ko");
-        */
+//fwprintf(stderr, L"answer        = \"%ls\"\n", answer);
+//fwprintf(stderr, L"answer_symbol = \"%ls\"\n", answer_symbol);
+//fwprintf(stderr, L"answer_name   = \"%ls\"\n", answer_name);
+//fprintf(stderr, "%s\n", ok ? "ok" : "ko");
         if (!ok) {
             printf("La réponse doit être de la forme \"Un Unobtainium\"\n");
-            clear_input(answer, answer_symbol, answer_name);
+            clear_input(raw_answer, answer, answer_symbol, answer_name);
             continue;
         }
         // Symbole OK ?
         //wprintf(L"tpe[%hhu]->symbol = \"%ls\"\n", x, tpe[x]->symbol);
-        if (wcscmp(answer_symbol, tpe[x]->symbol) == 0) {
+        if (wcscmp(answer_symbol, solution_symbol) == 0) {
             symbol_ok = true;
             symbol_mark = 1.;
         } else {
-            symbol_mark = mark(tpe[x]->symbol, answer_symbol);
+            symbol_mark = mark(solution_symbol, answer_symbol);
             wprintf(L"Non, le symbole de l'élément Z = %hhu n'est pas \"%ls\" !\n",
                     Z, answer_symbol);
         }
         // Nom OK ?
         //wprintf(L"tpe[%hhu]->names[0] = \"%ls\"\n", x, tpe[x]->names[0]);
-        if (wcscmp(answer_name, tpe[x]->names[0]) == 0) {
+        if (wcscmp(answer_name, solution_name) == 0) {
             name_ok = true;
             name_mark = 1.;
         } else {
-            name_mark = mark(tpe[x]->names[0], answer_name);
+            name_mark = mark(solution_name, answer_name);
             wprintf(L"Non, le nom de l'élément Z = %hhu n'est pas \"%ls\" !\n",
                     Z, answer_name);
         }
@@ -255,7 +298,7 @@ bool symbol_name_from_Z(unsigned char x) {
         }
         // Symbole | nom KO ?
         if (!symbol_ok || !name_ok) {
-            clear_input(answer, answer_symbol, answer_name);
+            clear_input(raw_answer, answer, answer_symbol, answer_name);
             continue;
         }
         // Symbole & nom OK ?
@@ -266,7 +309,7 @@ bool symbol_name_from_Z(unsigned char x) {
             } else {
                 printf("Voilà !\n");
             }
-            clear_input(answer, answer_symbol, answer_name);
+            clear_input(raw_answer, answer, answer_symbol, answer_name);
             break;
         } 
     }

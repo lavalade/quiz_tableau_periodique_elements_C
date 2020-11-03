@@ -12,7 +12,9 @@ Quiz sur le tableau périodique des éléments
 <p align="center">
 Implémentation en C d’un quiz (dans un terminal) sur le tableau périodique des éléments.
 <br />
-*Développement en cours...*
+<i>
+Développement en cours...
+</i>
 </p>
 </p>
 
@@ -24,13 +26,14 @@ Implémentation en C d’un quiz (dans un terminal) sur le tableau périodique d
 
 Dans un terminal : 
 
-- compilation : `$ make`,
-- exécution : `$ ./qtpe_c`.
+- compilation (avec `gcc`) : `$ make`,
+- exécution : `$ ./quiz`,
+- afficher l’aide : `$ ./quiz -h`.
 
 Pour chacun des 118 éléments du tableau périodique, le numéro atomique est affiché et il faut donner le *symbole* et le *nom* de l’élément :
 
 ```
-16 ? : S Soufre
+116 ? : Lv Livermorium
 Oui !
 ```
 
@@ -41,15 +44,15 @@ On peut donner sa langue au chat en frappant directement la touche *entrée*, et
 Arrêt du jeu :'(
 ```
 
-À la fin du jeu (après avoir répondu exactement aux 118 éléments, ou après avoir arrêté avant avec `q`), un pseudo est demandé pour enregistrer le score dans le fichier d’historique `./qtpe_c/qtpe_c.scores.md`, en voici un exemple :
+À la fin du jeu (après avoir répondu exactement aux 118 éléments, ou après avoir arrêté avant avec `q`), un pseudo est demandé pour enregistrer le score dans le fichier d’historique `scores.md`, en voici un exemple :
 
 ```
-| Pseudo           | AAAA-MM-JJ,hh:mm:ss | #el |    MS |    MN | #tt | #ko | #ok | Tps, s |
-|:-----------------|:-------------------:|----:|------:|------:|----:|----:|----:|-------:|
-|              dev | 2020-10-14,14:45:30 |   2 | 1.000 | 1.000 |   2 |   0 |   2 |      7 |
-|              dev | 2020-10-14,15:43:20 |   2 | 1.000 | 1.000 |   2 |   0 |   2 |     10 |
-|             lava | 2020-10-14,15:54:19 | 118 | 0.996 | 0.973 | 125 |   0 | 118 |    562 |
-|          essai-q | 2020-10-14,16:00:34 | 118 | 0.013 | 0.013 |   5 |   1 |   2 |     18 |
+| Pseudo           | AAAA-MM-JJ,hh:mm:ss | #el |    MS |    MN | #tt | #ko | #ok | A | L | Tps, s |
+|:-----------------|:-------------------:|----:|------:|------:|----:|----:|----:|:-:|:-:|-------:|
+| dev-modes        | 2020-11-02,23:03:31 | 118 | 0.017 | 0.015 |   7 |   0 |   3 | 0 | 0 |     30 |
+| dev-modes        | 2020-11-02,23:04:55 | 118 | 0.008 | 0.008 |   1 |   0 |   1 | 1 | 0 |      6 |
+| dev-modes        | 2020-11-02,23:05:27 | 118 | 0.025 | 0.025 |   3 |   0 |   3 | 0 | 1 |     15 |
+| dev-modes        | 2020-11-02,23:05:50 | 118 | 0.017 | 0.017 |   2 |   0 |   2 | 1 | 1 |      9 |
 ```
 
 Le contenu des colonnes est :
@@ -62,5 +65,7 @@ Le contenu des colonnes est :
 - `#tt` : nombre de tentatives,
 - `#ko` : nombre de langue-au-chat,
 - `#ok` : nombre de réponses exactes,
+- `A` : mode approximatif ? (`0` : non, `1` : oui),
+- `L` : mode léger ? (`0` : non, `1` : oui),
 - `Tps, s` : Durée du jeu en secondes.
 
