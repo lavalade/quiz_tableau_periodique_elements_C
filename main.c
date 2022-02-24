@@ -32,6 +32,7 @@ La réponse était : "Mt Meitnerium"
  **/
 
 #include <assert.h>
+#include <ctype.h>
 #include <locale.h>
 #include <stdbool.h>
 #include <stdlib.h>
